@@ -1,5 +1,8 @@
 # Hyena Quest Cheat（Delivery & Beyond 辅助）
 
+> 🌐 如果您看不懂中文，请转到 **[README_EN.md](README_EN.md)** 查看英文介绍。
+> If you can't read Chinese, see the **[English README](README_EN.md)**.
+
 BepInEx 5 插件。游戏自带 BepInEx，把编译出的 `HyenaQuestCheat.dll` 扔进
 `<游戏目录>\BepInEx\plugins\`，重启游戏，按 **INS** 出面板（默认开启）。
 
