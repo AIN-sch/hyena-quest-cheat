@@ -1,5 +1,10 @@
 # Hyena Quest Cheat (Delivery & Beyond)
 
+> 🗓️ **Game version checked: 2026-08-17**
+>
+> If the game updated and this didn't, it means **I stopped playing**, or **I forgot to upload**.
+> So, **don't nag me**. A real man stands on his own — figure out how to update it yourself.
+
 > ⚠️ **Disclaimer**
 >
 > This plugin is for **learning and research purposes only** (BepInEx plugin development, Unity Netcode network mechanics).
