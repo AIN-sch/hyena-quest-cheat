@@ -1,0 +1,146 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>HyenaQuestCheat</AssemblyName>
+    <RootNamespace>HyenaQuestCheat</RootNamespace>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- BepInEx core -->
+  <ItemGroup>
+    <Reference Include="BepInEx">
+      <HintPath>..\BepInEx\core\BepInEx.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>..\BepInEx\core\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Game assemblies -->
+  <ItemGroup>
+    <Reference Include="HyenaQuest.Core">
+      <HintPath>..\delivery-beyond_Data\Managed\HyenaQuest.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="HyenaQuest.Gameplay">
+      <HintPath>..\delivery-beyond_Data\Managed\HyenaQuest.Gameplay.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="HyenaQuest.SDK">
+      <HintPath>..\delivery-beyond_Data\Managed\HyenaQuest.SDK.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="ECM2">
+      <HintPath>..\delivery-beyond_Data\Managed\ECM2.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="ZLinq">
+      <HintPath>..\delivery-beyond_Data\Managed\ZLinq.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="FailCake.Timers">
+      <HintPath>..\delivery-beyond_Data\Managed\FailCake.Timers.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="FailCake.Hierarchy">
+      <HintPath>..\delivery-beyond_Data\Managed\FailCake.Hierarchy.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="FailCake.VIS">
+      <HintPath>..\delivery-beyond_Data\Managed\FailCake.VIS.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="QFSW.QC">
+      <HintPath>..\delivery-beyond_Data\Managed\QFSW.QC.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\delivery-beyond_Data\Managed\Newtonsoft.Json.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SaintsField.Runtime">
+      <HintPath>..\delivery-beyond_Data\Managed\SaintsField.Runtime.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.Netcode.Runtime">
+      <HintPath>..\delivery-beyond_Data\Managed\Unity.Netcode.Runtime.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.Collections">
+      <HintPath>..\delivery-beyond_Data\Managed\Unity.Collections.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.Mathematics">
+      <HintPath>..\delivery-beyond_Data\Managed\Unity.Mathematics.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.Profiling.Core">
+      <HintPath>..\delivery-beyond_Data\Managed\Unity.Profiling.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.InputSystem">
+      <HintPath>..\delivery-beyond_Data\Managed\Unity.InputSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>..\delivery-beyond_Data\Managed\Unity.TextMeshPro.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Unity engine: facade (type forwarding) + modules -->
+  <ItemGroup>
+    <Reference Include="UnityEngine">
+      <HintPath>..\delivery-beyond_Data\Managed\UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>..\delivery-beyond_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>..\delivery-beyond_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.PhysicsModule">
+      <HintPath>..\delivery-beyond_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>..\delivery-beyond_Data\Managed\UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>..\delivery-beyond_Data\Managed\UnityEngine.UIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>..\delivery-beyond_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.InputModule">
+      <HintPath>..\delivery-beyond_Data\Managed\UnityEngine.InputModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.InputForUIModule">
+      <HintPath>..\delivery-beyond_Data\Managed\UnityEngine.InputForUIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>..\delivery-beyond_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>
