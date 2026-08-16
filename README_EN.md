@@ -1,5 +1,17 @@
 # Hyena Quest Cheat (Delivery & Beyond)
 
+> ⚠️ **Disclaimer**
+>
+> This plugin is for **learning and research purposes only** (BepInEx plugin development, Unity Netcode network mechanics).
+> It must **not** be used for commercial purposes, to disrupt other players' experience, or in violation of any game/platform terms of service.
+>
+> - Any consequences arising from using, modifying, or redistributing this plugin (bans, losses, disputes, etc.) are **entirely the user's own responsibility**
+> - The author is not liable for any direct or indirect damages, nor for any legal consequences
+> - Do not use it in contexts that require fairness (tournaments, leaderboards, etc.)
+> - Please retain this notice when redistributing
+>
+> Downloading and using this means you agree to the above. **Your actions, your problem.**
+
 A BepInEx 5 plugin for *Delivery & Beyond* (in-game: *Hyena Quest*).
 The game ships with BepInEx already — just drop the compiled `HyenaQuestCheat.dll`
 into `<game folder>\BepInEx\plugins\`, restart the game, and press **INS** to toggle the menu (on by default).
