@@ -5,22 +5,13 @@ using HyenaQuest;
 
 namespace HyenaQuestCheat
 {
-    /// <summary>
-    /// 一键吸取废料（按钮/快捷键触发的一次性会话）：
-    ///  - 直接吸满（默认开）：房主=服务端直写瞬间填袋；客户端=全图批量标记让服务端并行结算。
-    ///  - 普通吸：每 0.4s 标记几件给服务端（SetVacuumingRPC），服务端按体积慢慢结算。
-    ///  - 真空收集判定在客户端（锥形触发器+视线），服务端只认 RPC → 可全图吸。
-    ///  - 袋满：房主+自动回收=入账船上继续；否则停止提示回收。
-    ///
-    /// 关键：服务端塞袋只认 AddScrap()，袋满直接 return → 那件被销毁且不进账。
-    /// 因此绝不一口气全图标记，每轮限量 + 按剩余容量估算跳过放不下的。
-    /// </summary>
+    /// <summary>一键吸取废料：房主直写/客户端批量标记；每轮限量防服务端销毁溢出。</summary>
     public static class VacuumAll
     {
         private static bool _active;
         private static float _nextScan;
         private static float _emptyWaitStart;        // 账本还有数但扫不到实体的等待起点
-        private static bool _burstDone;              // 客户端开局只批量标记一次，防重复标记溢出
+        private static readonly HashSet<ulong> _markedIds = new HashSet<ulong>();  // 客户端已标记等结算的废料ID，防重复标记
         private const int MaxPerScan = 4;            // 袋不紧张时每轮标记几件
         private const float ScanInterval = 0.4f;     // 每轮间隔秒数
 
@@ -47,11 +38,7 @@ namespace HyenaQuestCheat
         }
 
         /// <summary>全图是否真的没废料了：实体扫不到，且游戏账本也归 0。</summary>
-        /// <remarks>
-        /// 游戏"世界资讯"的剩余废料 = 账本 _worldScrap（地图生成时统计、吸走一件扣一件）。
-        /// 有些废料账本有数但暂时扫不到/吸不了（海胆没长好、房间没刷出、在别人手里），
-        /// 单看实体会误报"全图吸完"。
-        /// </remarks>
+        /// <remarks>世界废料以账本 _worldScrap 为准：部分废料暂不可扫，需结合账本判断。</remarks>
         public static bool IsWorldEmpty()
         {
             var sc = NetController<ScrapController>.Instance;
@@ -60,10 +47,7 @@ namespace HyenaQuestCheat
         }
 
         /// <summary>直接吸满：瞬间把袋子填到上限。</summary>
-        /// <remarks>
-        /// 房主=服务端直写：把世界里的废料直接结算进袋（扣账本+销毁实体，瞬间完成）。
-        /// 客户端=没服务端写权限，只能走游戏真空 RPC → 全图一起标记，让服务端并行结算。
-        /// </remarks>
+        /// <remarks>房主直写结算；客户端走真空 RPC 全图标记并行结算。</remarks>
         private static bool FillInstantly()
         {
             var local = PlayerController.LOCAL;
@@ -92,7 +76,7 @@ namespace HyenaQuestCheat
                     var scrap = nobj.GetComponent<entity_phys_prop_scrap>();
                     if (scrap == null || !scrap.CanScrap(local)) continue;
                     int reward = Mathf.Max(1, scrap.GetReward());
-                    if (reward > need - taken) continue;   // 放不下的留着
+                    if (reward > need - taken) continue;   // 放不下的跳过
                     try
                     {
                         holder.AddScrap(reward);
@@ -110,30 +94,57 @@ namespace HyenaQuestCheat
                 return false;
             }
 
-            // 客户端：全图一起标记，服务端并行结算（估算留余量，防服务端加价把袋撑爆销毁废料）
+            return false;
+        }
+
+        /// <summary>客户端直接吸满：全图流式标记，服务端并行结算（每轮只标新件，绝不溢出销毁废料）。</summary>
+        /// <remarks>用"原值+5"作安全上界，上界&lt;剩余容量才标记，避免袋撑爆销毁废料。</remarks>
+        private static bool FillInstantlyStream()
+        {
+            var local = PlayerController.LOCAL;
+            if (!local) return false;
+            var vacuum = local.GetVacuum();
+            if (!vacuum) return false;
+            var holder = vacuum.GetVacuumHolder();
+            if (!holder) return false;
+            var sc = NetController<ScrapController>.Instance;
+            var nm = NetworkManager.Singleton;
+            if (sc == null || nm == null) return false;
+
+            int maxScrap = sc.GetMaxContainerScrap();
+            int bag = holder.GetTotalScrap();
+            if (bag >= maxScrap) return false;
+
             int remaining = maxScrap - bag;
-            int margin = Mathf.Max(10, maxScrap / 5);
-            int estimated = 0;
+            int margin = Mathf.Max(10, maxScrap / 5);   // 再留一层余量，防服务端处理顺序导致瞬时挤爆
+            const int MaxPerFrame = 40;                  // 每帧最多发40条真空RPC，避免冲垮服务端
             int marked = 0;
-            foreach (var kv in NetworkManager.Singleton.SpawnManager.SpawnedObjects)
+            int estimated = 0;
+
+            foreach (var kv in nm.SpawnManager.SpawnedObjects)
             {
-                if (marked >= MaxPerScan * 8 || estimated >= remaining - margin) break;
+                if (marked >= MaxPerFrame || estimated >= remaining - margin) break;
                 var nobj = kv.Value;
                 if (nobj == null || !nobj.IsSpawned) continue;
                 var scrap = nobj.GetComponent<entity_phys_prop_scrap>();
                 if (scrap == null || !scrap.CanScrap(local)) continue;
-                int reward = Mathf.Max(1, scrap.scrap);   // 客户端只能估
+                ulong id = nobj.NetworkObjectId;
+                if (_markedIds.Contains(id)) continue;      // 已标记等结算，避免重复发
+                int bound = scrap.scrap + 5;                // 安全上界（服务端实际 ≤ 原值+5）
+                if (bound > remaining - margin) continue;   // 放不下(留余量)跳过，等袋空出再标
                 try
                 {
                     scrap.SetVacuumingRPC(local, true);
+                    _markedIds.Add(id);
                     marked++;
-                    estimated += reward;
+                    estimated += bound;
                 }
                 catch { }
             }
+
             if (marked > 0)
             {
-                Features.Notify("直接吸满：标记 " + marked + " 件，服务端结算中...");
+                Features.Notify("吸废料 +" + marked + " 件 (" + bag + "/" + maxScrap + ")");
                 return true;
             }
             return false;
@@ -144,13 +155,13 @@ namespace HyenaQuestCheat
         {
             if (Features.IsHost && AutoRecycle && TryRecycle())
             {
-                _burstDone = false;   // 清袋后重新开始，客户端能再批量标记一次
+                _markedIds.Clear();   // 清袋后重标新一批
                 Features.Notify("袋满已自动回收船上，继续吸取");
                 _nextScan = Time.time + 0.2f;
                 return true;
             }
             _active = false;
-            _burstDone = false;
+            _markedIds.Clear();
             Features.Notify("废料已满，请回收！");
             return false;
         }
@@ -159,10 +170,10 @@ namespace HyenaQuestCheat
         public static void Stop()
         {
             _active = false;
-            _burstDone = false;
+            _markedIds.Clear();
         }
 
-        /// <summary>房主：把袋里废料直接入账船上(③)，清袋继续吸（绕开物理倒袋，最稳）。</summary>
+        /// <summary>房主：袋里废料直写船上③并清袋（绕开物理倒袋）。</summary>
         private static bool TryRecycle()
         {
             var sc = NetController<ScrapController>.Instance;
@@ -182,14 +193,14 @@ namespace HyenaQuestCheat
             catch { return false; }
         }
 
-        /// <summary>按钮/快捷键：开始（或已在吸就忽略）。</summary>
+        /// <summary>按钮/快捷键：开始（已运行则忽略）。</summary>
         public static void Start()
         {
             if (_active) { Features.Notify("正在吸取中..."); return; }
             _active = true;
             _nextScan = 0f;                          // 立即开始
             _emptyWaitStart = 0f;
-            _burstDone = false;
+            _markedIds.Clear();
             Features.Notify("开始吸取废料");
         }
 
@@ -212,16 +223,16 @@ namespace HyenaQuestCheat
             int maxScrap = sc.GetMaxContainerScrap();
             int bag = holder.GetTotalScrap();
 
-            // 直接吸满：房主每轮直写瞬间填袋（配合自动回收能瞬间榨干全图）；客户端开局批量标记一次等结算
+            // 直接吸满：房主每轮直写瞬间填袋；客户端全图流式标记，服务端并行结算（每0.4s补标新件）
             if (Features.VacuumInstant)
             {
                 if (Features.IsHost)
                 {
                     if (FillInstantly()) return;          // 填完交给下面的袋满逻辑
                 }
-                else if (!_burstDone)
+                else
                 {
-                    if (FillInstantly()) { _burstDone = true; _nextScan = Time.time + 5f; return; }   // 等服务端结算
+                    if (FillInstantlyStream()) return;    // 标新件让服务端结算，_markedIds 防重复
                 }
             }
 
@@ -252,7 +263,7 @@ namespace HyenaQuestCheat
                 var scCtrl = NetController<ScrapController>.Instance;
                 if (scCtrl != null && scCtrl.GetWorldScrap(false) > 0)
                 {
-                    // 游戏账本还有数（海胆没长好/房间没刷出/在别人手里）→ 挂着慢扫等，别误报"吸完"
+                    // 账本有数但暂不可扫 → 慢扫等待，避免误报"吸完"
                     if (_emptyWaitStart == 0f)
                     {
                         _emptyWaitStart = Time.time;
@@ -274,7 +285,7 @@ namespace HyenaQuestCheat
                 return;
             }
 
-            // 袋快满时少吸点，把最后一批溢出的浪费压到最小（绝不让废料凭空消失）
+            // 袋快满时减量标记，控制最后批次溢出（避免废料凭空消失）
             int perScan = bag > maxScrap * 0.8f ? 1 : MaxPerScan;
             int remaining = maxScrap - bag;
             int marked = 0;
@@ -282,16 +293,19 @@ namespace HyenaQuestCheat
             foreach (var scrap in list)
             {
                 if (marked >= perScan || remaining <= 0) break;
-                int reward = Mathf.Max(1, scrap.scrap);   // 客户端估个大概，放不下的直接跳过
-                // 快满时留余量：服务端实际奖励可能比客户端看到的略高，避免溢出时废料被销毁
-                if (nearFull && reward > remaining - 6) continue;
-                if (reward > remaining) continue;
+                ulong id = scrap.NetworkObjectId;
+                if (_markedIds.Contains(id)) continue;    // 已标记等结算（直接吸满时），避免重复发
+                int bound = scrap.scrap + 5;              // 安全上界：服务端实际 ≤ 原值+5，防止估低溢出销毁废料
+                // 快满时留余量：避免并发结算把袋挤爆销毁废料
+                if (nearFull && bound > remaining - 6) continue;
+                if (bound > remaining) continue;
 
                 try
                 {
                     scrap.SetVacuumingRPC(local, true);
+                    _markedIds.Add(id);
                     marked++;
-                    remaining -= reward;
+                    remaining -= bound;
                 }
                 catch { /* 个别异常忽略 */ }
             }

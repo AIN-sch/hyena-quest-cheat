@@ -5,15 +5,7 @@ using HyenaQuest;
 
 namespace HyenaQuestCheat
 {
-    /// <summary>
-    /// 秒杀 / 操控玩家（全是远程 Everyone RPC，点按钮即生效）：
-    ///  - 秒杀/补刀：TakeHealthRPC(255) 无校验，第一杀被 D-SAFE 挡时 0.2s 后补刀。
-    ///  - 推飞/连推：ShoveRPC 力无上限。
-    ///  - 控血：SetHealthRPC(0~100) 精确钉血。
-    ///  - 抢物：SetGrabbing 抢所有权（无距离校验）→ 传脚下；背包物品先 DropItemRPC 丢出，脱手后再抢。
-    ///  - 一键满袋：房主 SetScrap(最大容量) 秒满；客户端只能隔空吸。
-    ///  - 碎玻璃/低重力板：OnBreakRPC / ToggleRPC 全场远程。
-    /// </summary>
+    /// <summary>秒杀/操控玩家：远程 RPC 免校验（杀/推/控血/抢物/满袋/碎玻璃）。</summary>
     public static class KillTarget
     {
         private static readonly List<entity_player> _players = new List<entity_player>();
@@ -50,7 +42,7 @@ namespace HyenaQuestCheat
         private struct StealOp { public entity_phys phys; public Vector3 to; public float at; public int tries; }
         private static readonly List<StealOp> _steals = new List<StealOp>();
 
-        // 抢物(背包)：目标背包物品被 DropItemRPC 丢出后，等它脱手（不再有主/锁），再挨个抢所有权传到自己脚下
+        // 抢物(背包)：物品被丢出脱手后，逐个抢所有权传到本地脚下
         private struct PendingSteal { public List<NetworkBehaviourReference> refs; public Vector3 to; public float at; public int tries; }
         private static readonly List<PendingSteal> _pendingSteals = new List<PendingSteal>();
 
@@ -75,7 +67,7 @@ namespace HyenaQuestCheat
                         foreach (var p in all)
                         {
                             if (p == null || !p.IsSpawned) continue;
-                            if (local != null && p == local) continue;   // 排除自己
+                            if (local != null && p == local) continue;   // 排除本地
                             _players.Add(p);
                         }
                     }
@@ -112,7 +104,7 @@ namespace HyenaQuestCheat
                 _steals[i] = s;
             }
 
-            // ---- 抢物(背包)：等目标背包物品被丢出、脱手后，挨个抢所有权传到自己脚下 ----
+            // ---- 抢物(背包)：物品脱手后逐个抢所有权传到本地脚下 ----
             for (int i = _pendingSteals.Count - 1; i >= 0; i--)
             {
                 var ps = _pendingSteals[i];
@@ -123,7 +115,7 @@ namespace HyenaQuestCheat
                 foreach (var r in ps.refs)
                 {
                     var item = NETController.Get<entity_item_pickable>(r);
-                    if (item == null || !item.IsSpawned) continue;          // 已消失，放弃这件
+                    if (item == null || !item.IsSpawned) continue;          // 已消失，跳过
                     if (item.IsBeingGrabbed() || item.HasOwner() || item.IsLocked())
                     {
                         remaining.Add(r);                                    // 还没脱手/被锁，下轮再试
@@ -198,7 +190,7 @@ namespace HyenaQuestCheat
 
         // ============ 推飞 ============
 
-        /// <summary>单次推飞目标（推离自己，带一点向上）。</summary>
+        /// <summary>单次推飞目标（推离本地，带一点向上）。</summary>
         public static void ShoveOnce(entity_player p)
         {
             if (p == null || !p.IsSpawned) return;
@@ -214,7 +206,7 @@ namespace HyenaQuestCheat
         public static bool IsShoveLooping(entity_player p)
             => p != null && _shoveLoopAt.ContainsKey(p.GetPlayerID());
 
-        /// <summary>开关对某玩家的连推（一直推上天，站不起来）。</summary>
+        /// <summary>开关对某玩家的连推（持续推上天）。</summary>
         public static void SetShoveLoop(entity_player p, bool on)
         {
             if (p == null) return;
@@ -296,7 +288,7 @@ namespace HyenaQuestCheat
 
         // ============ 控血 ============
 
-        /// <summary>把目标血量钉到指定值（1=折磨不放死，100=满血，0=秒杀）。0 会被 D-SAFE 挡一次。</summary>
+        /// <summary>把目标血量钉到指定值（1=1血，100=满血，0=秒杀）。0 会被 D-SAFE 挡一次。</summary>
         public static void SetBlood(entity_player p, byte val)
         {
             if (p == null || !p.IsSpawned) return;
@@ -313,12 +305,7 @@ namespace HyenaQuestCheat
 
         // ============ 抢物到脚下 ============
 
-        /// <summary>
-        /// 抢目标身上所有物资到自己脚下：
-        ///   1) 目标手里正抓的物理物 → 抢所有权（CanGrab 只查锁定，不查被谁抓）→ 传脚下。
-        ///   2) 目标背包物品 → 读 NetworkList（比缓存哈希全、同名ID不丢项）→ DropItemRPC 强制丢出
-        ///      → 等物品脱手后再抢所有权传到自己脚下。
-        /// </summary>
+        /// <summary>抢目标全部物资到本地脚下：手里物抢所有权；背包物丢出脱手后抢回。</summary>
         public static void StealItems(entity_player p)
         {
             if (p == null || !p.IsSpawned) return;
@@ -326,7 +313,7 @@ namespace HyenaQuestCheat
             Vector3 footPos = local ? (local.transform.position + local.transform.forward * 1.5f + Vector3.up * 0.3f) : Vector3.zero;
             int n = 0;
 
-            // 1. 目标手里正抓着的物理物 → 抢所有权（CanGrab 只查锁定，不查是否被他人抓）→ 传脚下
+            // 目标手里正抓的物理物 → 抢所有权（CanGrab 只查锁定）→ 传脚下
             foreach (var ph in Object.FindObjectsByType<entity_phys>())
             {
                 if (ph == null || !ph.IsSpawned) continue;
@@ -352,7 +339,7 @@ namespace HyenaQuestCheat
             Features.Notify("抢了 " + p.GetPlayerName() + " 的 " + n + " 件");
         }
 
-        /// <summary>抢所有玩家的背包物品到自己脚下。</summary>
+        /// <summary>抢所有玩家的背包物品到本地脚下。</summary>
         public static void StealAll()
         {
             int n = 0;
@@ -378,11 +365,7 @@ namespace HyenaQuestCheat
             Features.Notify("清空 " + p.GetPlayerName() + " 的包 (" + refs.Count + " 件)");
         }
 
-        /// <summary>
-        /// 直接读目标的 NetworkList 背包，解析出所有有效物品引用。
-        /// 比 GetInventoryCache() 靠谱：那是按物品ID去重的哈希，同名ID会丢项，且只在列表变化时重建；
-        /// NetworkList 是 Everyone 可读、永远最新、不去重。
-        /// </summary>
+        /// <summary>读目标 NetworkList 背包解析有效物品引用（Everyone 可读、不去重）。</summary>
         private static List<NetworkBehaviourReference> SnapshotInventoryRefs(entity_player_inventory inv)
         {
             var list = new List<NetworkBehaviourReference>();
@@ -407,10 +390,7 @@ namespace HyenaQuestCheat
 
         // ============ 一键满袋 ============
 
-        /// <summary>
-        /// 一键把真空袋填满废料。房主：SetScrap(最大容量) 秒满；
-        /// 客户端：袋是服务端权威写不了，只能提示（配隔空吸废料功能）。
-        /// </summary>
+        /// <summary>一键填满真空袋：房主 SetScrap 秒满；客户端仅提示。</summary>
         public static void RefillBag()
         {
             var local = PlayerController.LOCAL;
@@ -437,7 +417,7 @@ namespace HyenaQuestCheat
             }
         }
 
-        // ============ 远程骚扰 ============
+        // ============ 远程破坏 ============
 
         /// <summary>全场玻璃全碎。</summary>
         public static void BreakAllGlass()
@@ -472,7 +452,7 @@ namespace HyenaQuestCheat
         {
             if (p == null || !p.IsSpawned) return;
             if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsServer)
-            { Features.Notify("拉人需要房主(主机)，你现在是客户端"); return; }
+            { Features.Notify("拉人需要房主(主机)，当前为客户端"); return; }
             var local = PlayerController.LOCAL;
             if (local == null) return;
             try
@@ -483,7 +463,7 @@ namespace HyenaQuestCheat
             catch (System.Exception e) { Features.Notify("拉人失败: " + e.Message); }
         }
 
-        /// <summary>房主：把场上所有玩家拉到自己身边。</summary>
+        /// <summary>房主：把场上所有玩家拉到本地身边。</summary>
         public static void PullAllToSelf()
         {
             foreach (var p in _players) PullToSelf(p);
@@ -491,10 +471,7 @@ namespace HyenaQuestCheat
 
         // ============ 自杀（仅手动） ============
 
-        /// <summary>
-        /// 自杀：仅玩家手动点菜单按钮触发。独立方法，任何自动逻辑都不调用它；
-        /// 列表本身不含自己，自动逻辑只作用于列表目标，因此不会被任何流程带出来。
-        /// </summary>
+        /// <summary>自杀：仅手动触发，独立方法，不被任何自动流程调用。</summary>
         public static void Suicide()
         {
             var local = PlayerController.LOCAL;
@@ -505,12 +482,7 @@ namespace HyenaQuestCheat
 
         // ============ 复活 ============
 
-        /// <summary>
-        /// 复活目标玩家（零成本，任意客户端可发）。
-        /// SetHealthRPC [SendTo.Owner, 注册权限 Everyone] 直接拉满血 → 目标 owner 写 _health NetVar
-        /// → 全员收到 HealthStatusUpdate(false) → 游戏自动跑完整复活流程（撤ragdoll/传回出生点/停观战/解冻）。
-        /// 对活人调 = 满血，无副作用。原版复活终端的"收钱"在调 Revive() 之前，直接跳过了。
-        /// </summary>
+        /// <summary>复活目标（零成本）：SetHealthRPC 满血触发完整复活流程。</summary>
         public static void RevivePlayer(entity_player p)
         {
             if (p == null || !p.IsSpawned) return;
@@ -521,7 +493,7 @@ namespace HyenaQuestCheat
                 : p.GetPlayerName() + " 已满血");
         }
 
-        /// <summary>复活自己（死了直接回出生点）。</summary>
+        /// <summary>复活本地（死后直接回出生点）。</summary>
         public static void ReviveSelf()
         {
             var local = PlayerController.LOCAL;
@@ -529,7 +501,7 @@ namespace HyenaQuestCheat
             RevivePlayer(local);
         }
 
-        /// <summary>复活全部玩家（含自己）。</summary>
+        /// <summary>复活全部玩家（含本地）。</summary>
         public static void ReviveAll()
         {
             int n = 0;
@@ -548,8 +520,7 @@ namespace HyenaQuestCheat
 
         private static void DriveLoopKill()
         {
-            // 遍历时只记账，遍历完再写字典 —— 边遍历边写会在 Mono 里抛
-            // "Collection was modified"（foreach 里改版本号），每帧异常刷屏卡死全房。
+            // 遍历只记账、遍历后写字典，避免 Mono 抛 "Collection was modified"
             var gone = new List<byte>();
             var next = new List<KeyValuePair<byte, float>>();
             foreach (var kv in _loopAt)
@@ -581,7 +552,7 @@ namespace HyenaQuestCheat
                     var t = FindByID(kv.Key);
                     if (t != null && t.IsSpawned)
                     {
-                        // 持续往天上推（摔不死但站不起来）；加一点水平随机避免原地打转
+                        // 持续向上推（摔不死）；加水平随机避免原地打转
                         Vector3 dir = Vector3.up + new Vector3(Random.Range(-0.4f, 0.4f), 0f, Random.Range(-0.4f, 0.4f));
                         try { t.ShoveRPC(dir, ShoveForce); } catch { }
                         next.Add(new KeyValuePair<byte, float>(kv.Key, Time.time + ShoveInterval));

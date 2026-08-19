@@ -5,14 +5,10 @@ using HyenaQuest;
 
 namespace HyenaQuestCheat
 {
-    /// <summary>
-    /// 公屏刷屏：反射调 ChatController.ChatServerRPC。
-    /// 该 RPC 带 [Rpc(SendTo.SpecifiedInParams, InvokePermission=Everyone)]，任意客户端可发、服务端广播。
-    /// RpcParams 用 chat.RpcTarget.Server（BaseRpcTarget → RpcParams 隐式转换）。
-    /// </summary>
+    /// <summary>公屏刷屏：反射调 ChatServerRPC，任意客户端可发、服务端广播。</summary>
     public static class ChatSpam
     {
-        public static string Message = "大家好呀~";
+        public static string Message = "大家好";
         public static float Interval = 0.1f;
         public static bool Active;
 

@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using HarmonyLib;
 using UnityEngine;
+using Unity.Netcode.Components;
 using ECM2;
 using HyenaQuest;
 
@@ -49,7 +50,7 @@ namespace HyenaQuestCheat
         }
 
         // ---------------- 移动加速：倍率作用于 GetMaxSpeed ----------------
-        // GetMaxSpeed 是 virtual，走路/飞/游都走它 → 倍率对全部移动生效。
+        // GetMaxSpeed 为 virtual，覆盖全部移动模式。
         [HarmonyPatch(typeof(Character), "GetMaxSpeed")]
         public static class Patch_Speed
         {
@@ -69,7 +70,7 @@ namespace HyenaQuestCheat
             }
         }
 
-        // ---------------- AA：伪造复制给别人的根节点旋转 + 补偿本地相机 ----------------
+        // ---------------- AA：伪造复制给其他玩家的根节点旋转 + 补偿本地相机 ----------------
         [HarmonyPatch(typeof(entity_player_camera), "UpdateView")]
         public static class Patch_UpdateView
         {
@@ -144,8 +145,7 @@ namespace HyenaQuestCheat
         }
 
         // ---------------- AA：移动方向跟随真实视角 ----------------
-        // HandleMove 的移动方向用假yaw的 transform.forward/right 会导致 WASD 跟着 AA 乱转，
-        // 替换成按真实朝向计算的 GetForward/GetRight。
+        // HandleMove 用假yaw方向会带偏 WASD；替换为真实朝向的 GetForward/GetRight。
         [HarmonyPatch(typeof(entity_player_movement), "HandleMove")]
         public static class Patch_HandleMove
         {
@@ -188,10 +188,7 @@ namespace HyenaQuestCheat
         }
 
         // ---------------- 飞行 / 穿墙 ----------------
-        // 飞行：切到 ECM2 原生 Flying 模式（不吃重力），每帧给 3D 移动方向，WASD 水平 + 空格上/ctrl 下。
-        //        碰撞照常（飞不穿墙）。
-        // 穿墙：characterMovement.detectCollisions = false → 胶囊碰撞器禁用，加飞行控制避免沉底。
-        // HandleMove 是游戏"读输入→设方向→设重力"的地方，Prefix 拦下来换成我们的逻辑。
+        // 飞行走 ECM2 Flying 模式；穿墙关碰撞并加飞行控制防沉底；HandleMove 由 Prefix 接管。
 
         private static bool IsLocalMovement(entity_player_movement mov)
         {
@@ -208,11 +205,11 @@ namespace HyenaQuestCheat
             static bool Prefix(entity_player_movement __instance)
             {
                 bool active = Features.Fly || Features.Noclip;
-                if (!IsLocalMovement(__instance)) return true;   // 别人的角色不碰
+                if (!IsLocalMovement(__instance)) return true;   // 非本地角色不动
 
                 if (!active)
                 {
-                    // 关掉后把碰撞和移动模式复位（重力由游戏自己每帧设，不用管）
+                    // 关闭后复位碰撞与移动模式（重力由游戏自行设置）
                     if (_prevActive)
                     {
                         __instance.characterMovement.detectCollisions = true;
@@ -226,7 +223,7 @@ namespace HyenaQuestCheat
                 var local = PlayerController.LOCAL;
                 if (local == null || local.IsDead() || !Features.InRound())
                 {
-                    // 死了/不在对局：恢复碰撞，别穿墙着死；不飞
+                    // 死亡/不在对局：恢复碰撞，禁用飞行
                     __instance.characterMovement.detectCollisions = true;
                     if (__instance.IsFlying()) __instance.SetMovementMode(Character.MovementMode.Walking, 0);
                     return false;
@@ -239,10 +236,9 @@ namespace HyenaQuestCheat
                 __instance.gravity = Vector3.zero;
                 if (!__instance.IsFlying()) __instance.SetMovementMode(Character.MovementMode.Flying, 0);
 
-                // 移动方向：WASD 优先读游戏自己的移动输入（尊重改键/手柄），读不到退回原始键盘兜底，
-                // 防游戏输入被禁导致 moveAction 恒 0、WASD 失灵；空格上 / ctrl 下（原始键盘，一直可用）
+                // 移动方向：优先游戏移动输入，读不到退回键盘；空格上/ctrl下
                 Vector3 dir = Vector3.zero;
-                if (!Features.MenuOpen)   // 菜单开着不操控（避免打字框里按空格把自己顶飞）
+                if (!Features.MenuOpen)   // 菜单开启时不操控（避免打字框按键误操作）
                 {
                     var kbd = UnityEngine.InputSystem.Keyboard.current;
                     Vector2 input = Vector2.zero;
@@ -258,9 +254,7 @@ namespace HyenaQuestCheat
                         if (kbd[UnityEngine.InputSystem.Key.D].isPressed) input.x += 1f;
                         if (kbd[UnityEngine.InputSystem.Key.A].isPressed) input.x -= 1f;
                     }
-                    // 移动基准用「真实视角」方向（AntiAim.GetForward/GetRight）：
-                    // AA 开着时 transform 被假yaw转着，跟 transform.forward 走 WASD 会跟着AA乱转；
-                    // 这俩永远返回真实yaw算的水平方向（AA关=相机朝向），和 AA 补丁一致。
+                    // 移动基准用真实视角方向（GetForward/GetRight），与 AA 补丁一致
                     Vector3 fwd = AntiAim.GetForward();
                     Vector3 right = AntiAim.GetRight();
                     dir = fwd * input.y + right * input.x;
@@ -277,7 +271,7 @@ namespace HyenaQuestCheat
             }
         }
 
-        // 飞行速度：Flying 模式吃 maxFlySpeed（游戏从没用过，是 0），给它一个下限
+        // 飞行速度：Flying 模式用 maxFlySpeed（默认0），设下限
         [HarmonyPatch(typeof(entity_player_movement), "GetMaxSpeed")]
         public static class Patch_FlySpeed
         {
@@ -289,7 +283,7 @@ namespace HyenaQuestCheat
             }
         }
 
-        // 飞行手感：加速拉满，指哪打哪不肉
+        // 飞行加速度上限提高，响应及时
         [HarmonyPatch(typeof(Character), "GetMaxAcceleration")]
         public static class Patch_FlyAccel
         {
@@ -298,6 +292,72 @@ namespace HyenaQuestCheat
                 if (!(Features.Fly || Features.Noclip)) return;
                 if (!IsLocalMovement(__instance as entity_player_movement)) return;
                 __result = Mathf.Max(__result, 40f);
+            }
+        }
+
+        // ---------------- 反观战(房主)：本地视为存活（对外 health 已为0） ----------------
+        // 仅房主生效：房客真死了不能被跳掉死亡流程（会卡住不弹死亡界面）。
+        [HarmonyPatch(typeof(entity_player), "IsDead")]
+        public static class Patch_AntiSpec_IsDead
+        {
+            static bool Prefix(entity_player __instance, ref bool __result)
+            {
+                if (!Features.AntiSpectate || !Features.IsHost) return true;
+                if (!ReferenceEquals(__instance, PlayerController.LOCAL)) return true;
+                __result = false;   // 本地永远活着，照常玩
+                return false;
+            }
+        }
+
+        // ---------------- 反观战(房主)：跳过本地死亡处理（不冻结/不传天空/不丢包） ----------------
+        [HarmonyPatch(typeof(entity_player), "HealthStatusUpdate")]
+        public static class Patch_AntiSpec_Death
+        {
+            static bool Prefix(entity_player __instance)
+            {
+                if (!Features.AntiSpectate || !Features.IsHost) return true;
+                if (!ReferenceEquals(__instance, PlayerController.LOCAL)) return true;
+                return false;
+            }
+        }
+
+        // ---------------- 反观战(房客)：复制位置钉地底 → 观战相机锚进地里=黑屏 ----------------
+        // CheckForStateChange 是同步包读位置的唯一入口，塞假位置读完后立即还原本地真实位置。
+        [HarmonyPatch(typeof(NetworkTransform), "CheckForStateChange")]
+        public static class Patch_AntiSpec_Guest
+        {
+            private static Transform _staged;   // 本帧被塞假位置的变换
+            private static Vector3 _realPos;    // 真实位置（塞完立即还原）
+
+            static bool Prefix(NetworkTransform __instance)
+            {
+                if (!Features.AntiSpectate || Features.IsHost) return true;
+                var local = PlayerController.LOCAL;
+                if (local == null) return true;
+                // 只伪造本地 owner 权威的 NetworkTransform
+                if (!__instance.CanCommitToTransform || __instance.transform != local.transform) return true;
+                _staged = __instance.transform;
+                _realPos = _staged.position;
+                _staged.position = _realPos + new Vector3(0f, -1.2f, 0f);
+                return true;
+            }
+
+            static void Postfix(NetworkTransform __instance)
+            {
+                if (_staged != null) { _staged.position = _realPos; _staged = null; }
+            }
+        }
+
+        // ---------------- 跑房杀：进房失败原始原因（本地化前） ----------------
+        // OnConnectionEnd 本地化前截取原始 key（server-full/banned/version）。
+        [HarmonyPatch(typeof(NETController), "OnConnectionEnd")]
+        public static class Patch_JoinErr
+        {
+            public static string Raw;
+
+            static void Prefix(string errorMessage)
+            {
+                Raw = errorMessage;
             }
         }
     }

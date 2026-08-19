@@ -4,26 +4,14 @@ using HyenaQuest;
 
 namespace HyenaQuestCheat
 {
-    /// <summary>
-    /// 一键配送到：隔空抓起已下单的配送件，传送至匹配送货台，松手触发服务端结算。
-    ///
-    /// 漏洞点：
-    ///  - prop.SetGrabbing(true) 是公开方法，内部发 SetGrabbingRPC 给服务端 → 所有权转本地（ChangeOwnership），
-    ///    不校验距离/朝向。
-    ///  - 拿到所有权后本地写 transform.position（NetworkTransform 从 owner 复制）→ 件传到送货台。
-    ///  - 配送判定在服务端：送货台是服务端触发器，件进去且地址匹配即结算。
-    ///
-    /// 两段状态机：先抓（所有权异步转移），等 IsOwner 后再传送+松手。
-    /// 不用 physgun（_grabbingObject），物理枪会把件往玩家面前拉，反而拽走。
-    /// </summary>
+    /// <summary>一键配送：SetGrabbing 隔空抓配送件→传送到匹配送货台→松手触发服务端结算。</summary>
     public static class AutoDeliver
     {
         private static entity_prop_delivery _target;
         private static DeliveryController _dc;
         private static float _timeout;
 
-        // 刚投递过的件：服务端要求松手后静止满 1 秒才 CompleteTask + 上锁。
-        // 投完立刻又抓同一个会反复打断结算 → 死循环。按对象 ID 记一笔，3 秒内不碰。
+        // 刚投递的件需静止1秒结算：3秒内不重复抓同一件（防打断结算）
         private static ulong _recentId;
         private static float _recentAt;
 
@@ -48,7 +36,7 @@ namespace HyenaQuestCheat
                 var p = nobj.GetComponent<entity_prop_delivery>();
                 if (p == null) continue;
                 if (p.IsLocked()) continue;
-                if (RecentlyReleased(p.NetworkObjectId)) continue;   // 刚送完的这件，等它结算完
+                if (RecentlyReleased(p.NetworkObjectId)) continue;   // 刚送完的件，等待结算完成
                 var dc = NetController<DeliveryController>.Instance;
                 if (dc && dc.GetDeliverySpotByAddress(p.GetAddress()) != null) return true;
             }
@@ -77,7 +65,7 @@ namespace HyenaQuestCheat
                 var p = nobj.GetComponent<entity_prop_delivery>();
                 if (p == null) continue;
                 if (p.IsLocked()) continue;                                        // 还没解锁，跳过
-                if (RecentlyReleased(p.NetworkObjectId)) continue;                 // 刚送完的这件，等结算
+                if (RecentlyReleased(p.NetworkObjectId)) continue;                 // 刚送完的件，等待结算
                 if (dc.GetDeliverySpotByAddress(p.GetAddress()) == null) continue; // 地址没送货台
 
                 prop = p;
@@ -112,7 +100,7 @@ namespace HyenaQuestCheat
             Physics.SyncTransforms();
             _target.SetGrabbing(false);
 
-            // 记下刚送完的件：结算要 1 秒静止窗口，下一轮别马上又抓同一个
+            // 记录刚送完的件：结算需1秒静止窗口，避免重复抓取
             _recentId = _target.NetworkObjectId;
             _recentAt = Time.time;
 

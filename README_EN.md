@@ -1,6 +1,6 @@
 # Hyena Quest Cheat (Delivery & Beyond)
 
-> 🗓️ **Game version checked: 2026-08-17**
+> 🗓️ **Game version checked: 2026-08-19**
 >
 > If the game updated and this didn't, it means **I stopped playing**, or **I forgot to upload**.
 > So, **don't nag me**. A real man stands on his own — figure out how to update it yourself.
@@ -27,10 +27,11 @@ Source is open. Take it, mod it, do whatever you want with it.
 
 Everything that works, grouped by use:
 
-- **Auto-farm**: one-click idle play (auto-win, host only) · one-click delivery (dial + grab + drop loop) · one-click vacuum (suck up every scrap on the map, can fill instantly) · auto-recycle to ship when the bag is full (host)
-- **Survival**: god mode (health never drops below 1) · move speed multiplier (1–10x, smooth ramp)
-- **Annoy others**: instant kill / re-kill (breaks D-SAFE) · shove / rapid shove · pin health (1 HP / full / loop) · steal items to your feet · force drop items · break glass · teleport players (host) · revive · suicide (manual only)
+- **Auto-farm**: server hopper (auto hop: join → kill all → leave → next, infinite loop, scans public lobbies) · one-click idle play (auto-win, host only) · one-click delivery (dial + grab + drop loop) · one-click vacuum (suck up every scrap on the map, can fill instantly) · auto-recycle to ship when the bag is full (host)
+- **Survival**: god mode (health never drops below 1) · move speed multiplier (1–10x, smooth ramp) · anti-spectate (host fakes death / guest pins position underground) · anti-grief (block attack RPCs, snatch stolen items back)
+- **Annoy others**: instant kill / re-kill (breaks D-SAFE) · shove / rapid shove · pin health (1 HP / full / loop) · steal items to your feet · force drop items · break glass · teleport players (host) · revive · suicide (manual only) · aim hotkeys (aim at a player: kill / revive / 1 HP / shove / steal / drop)
 - **Fun**: spinning anti-aim (spin / offset / bow) · fly / noclip · chat spam
+- **Visuals**: ESP (3D boxes + health / scrap / held item)
 - **Menu**: INS to toggle · rebindable hotkeys (keyboard / mouse) · draggable and resizable
 
 ## Known Bugs
@@ -40,6 +41,7 @@ Honest answer: I can't test every feature on every machine in every match. There
 - **Anti-aim is buggy.** What exactly? Can't be bothered to dig into it, can't be bothered to fix it. It works well enough — just use it.
 - **One-click idle play** is a pipeline — if any step breaks (network, map not fully loaded), it might stall. There's a timeout fallback, but no guarantees.
 - **Fly / noclip** interact with the physics system; you may occasionally get bounced back when passing through terrain quickly.
+- **Server hopper** hops at high frequency, which risks Steam rate-limit / anti-cheat flags; it scans public lobbies, so the players it hits are unpredictable.
 
 Anything else — let me know when you hit it. You can ping me in the group below.
 
@@ -77,6 +79,7 @@ Or open `HyenaQuestCheat.sln` in Visual Studio and build there.
 
 ## Changelog
 
+- **v1.3.0**: Added server hopper (auto lobby hopping), anti-spectate, anti-grief, ESP, aim hotkeys, one-click dialing; fast-skips failed joins with logged reasons
 - **v1.2.6**: Added fly and noclip; source open-sourced, added .sln project
 - **v1.2.1**: Fixed the loop-kill / rapid-shove crash that froze the whole lobby; fixed the one-click delivery infinite loop re-delivering the same order
 - **v1.2.0**: Initial release

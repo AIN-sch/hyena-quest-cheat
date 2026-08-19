@@ -4,12 +4,7 @@ using HyenaQuest;
 
 namespace HyenaQuestCheat
 {
-    /// <summary>
-    /// 一键配送：拨号 + 拿取配送串成一步，循环开关。
-    ///   开启 → 自动拨号 → 等送货车出件 → 隔空拿取送达 → 有下一单继续，送完为止。
-    ///   全程不要求在电话/送货台旁边（隔空触发）。
-    ///   开启期间接近电话的玩家会被轻轻弹开，防按键捣乱。
-    /// </summary>
+    /// <summary>一键配送：拨号+拿取+送达循环；接近电话的其他玩家会被弹开防干扰。</summary>
     public static class AutoOrder
     {
         private enum Stage { None, RetryDial, Dialing, WaitingSpawn, Delivering }
@@ -66,7 +61,7 @@ namespace HyenaQuestCheat
             // 离开对局 → 自动停
             if (!Features.InRound()) { Stop(); return; }
 
-            // 全程防干扰：别的玩家接近电话就轻轻弹开
+            // 全程防干扰：其他玩家接近电话即弹开
             if (Time.time >= _defendAt)
             {
                 _defendAt = Time.time + 0.4f;
@@ -115,7 +110,7 @@ namespace HyenaQuestCheat
                     if (AutoDeliver.IsWorking) break;
                     // 这一单送完 → 还有下一单就继续拨号（循环），没有就停
                     _delivered++;
-                    if (_delivered > 50) { Stop(); Features.Notify("一键配送：送得够多了，自动停止"); break; }
+                    if (_delivered > 50) { Stop(); Features.Notify("一键配送：已达上限，自动停止"); break; }
                     if (AutoDeliver.HasDeliverable())
                     {
                         AutoDeliver.TryDeliver();
@@ -148,7 +143,7 @@ namespace HyenaQuestCheat
             return false;
         }
 
-        /// <summary>弹开接近电话的玩家，防他们按键搞乱号码 / 抢单。</summary>
+        /// <summary>弹开接近电话的玩家，防干扰拨号/抢单。</summary>
         private static void DefendPhone()
         {
             var pc = NetController<PhoneController>.Instance;

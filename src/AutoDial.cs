@@ -7,11 +7,7 @@ using HyenaQuest;
 
 namespace HyenaQuestCheat
 {
-    /// <summary>
-    /// 一键打电话（隔空拨号）。
-    /// entity_player.OnUseRPC 是 [Rpc(SendTo.Server)]，服务端只校验目标存在、不校验距离/朝向，
-    /// 因此在本地玩家上反射调用即可隔空按电话按钮。自动挑可承担且未下单的任务逐位拨号。
-    /// </summary>
+    /// <summary>一键拨号：反射调用 OnUseRPC 隔空按电话，自动挑可下单任务逐位拨号。</summary>
     public static class AutoDial
     {
         private static List<string> _buttons;          // 待按的按钮字符队列
@@ -57,7 +53,7 @@ namespace HyenaQuestCheat
 
             var number = target.Value.Address.ToString();
 
-            // 拨号前先按 CLEAR，清掉别人正在输入的号码，避免混号/空号
+            // 拨号前按 CLEAR 清空号码，避免混号/空号
             PressClear();
 
             _buttons = new List<string>();
@@ -90,7 +86,7 @@ namespace HyenaQuestCheat
             var local = PlayerController.LOCAL;
             if (!pc || !local) { _buttons = null; return; }
 
-            // 电话非空闲（上一通还在响/别人正用着）就等
+            // 电话非空闲（响铃中/被其他玩家占用）就等
             if (pc.Status() != PHONE_STATUS.IDLE) { _nextPress = Time.time + 0.5f; return; }
 
             var ch = _buttons[0];
@@ -160,7 +156,7 @@ namespace HyenaQuestCheat
             }
         }
 
-        /// <summary>按 CLEAR 清掉电话上别人正在输入的号码（共享电话，防混号）。</summary>
+        /// <summary>按 CLEAR 清空电话号码（共享电话，防混号）。</summary>
         private static void PressClear()
         {
             var pc = NetController<PhoneController>.Instance;

@@ -1,5 +1,6 @@
 // Hyena Quest Cheat · BepInEx 5 插件入口
-// INS 切换面板显隐；Update 逐帧驱动各功能模块。
+// INS 切换面板显隐；Update 逐帧驱动各功能模块 + 全功能快捷键。
+using System.Collections.Generic;
 using BepInEx;
 using BepInEx.Configuration;
 using UnityEngine;
@@ -8,35 +9,39 @@ using HyenaQuest;
 
 namespace HyenaQuestCheat
 {
-    [BepInPlugin("hyena.quest.cheat", "Hyena Quest Cheat", "1.2.6")]
+    [BepInPlugin("hyena.quest.cheat", "Hyena Quest Cheat", "1.3.0")]
     public class Plugin : BaseUnityPlugin
     {
-        private static ConfigEntry<string> CfgDial;
-        private static ConfigEntry<string> CfgDeliver;
-        private static ConfigEntry<string> CfgVacuum;
+        private static readonly Dictionary<Features.HotkeyAction, ConfigEntry<string>> HkCfgs = new();
 
         private void Awake()
         {
-            CfgDial = Config.Bind("Hotkeys", "DialPhone", "K:F3", "一键打电话热键（K:键 / M:鼠标按钮）");
-            CfgDeliver = Config.Bind("Hotkeys", "Deliver", "K:F4", "一键拿取配送热键");
-            CfgVacuum = Config.Bind("Hotkeys", "VacuumToggle", "K:F5", "一键吸废料热键");
-
-            // 读配置初始化热键
-            Features.DialHotkey = Hotkey.Deserialize(CfgDial.Value);
-            Features.DeliverHotkey = Hotkey.Deserialize(CfgDeliver.Value);
-            Features.VacuumHotkey = Hotkey.Deserialize(CfgVacuum.Value);
+            // 快捷键绑定到 cfg（首次默认，之后读配置）
+            foreach (var it in Features.Menu.HotkeyItems)
+            {
+                var cfg = Config.Bind("Hotkeys", it.Label,
+                    Features.GetHotkey(it.Action).Serialize(), it.Label + " 热键 (K:键 / M:鼠标按钮)");
+                Features.SetHotkey(it.Action, Hotkey.Deserialize(cfg.Value));
+                HkCfgs[it.Action] = cfg;
+            }
 
             // 菜单里改键后写回 cfg，下次启动保持
             Features.PersistHotkeys = () =>
             {
-                CfgDial.Value = Features.DialHotkey.Serialize();
-                CfgDeliver.Value = Features.DeliverHotkey.Serialize();
-                CfgVacuum.Value = Features.VacuumHotkey.Serialize();
+                foreach (var kv in HkCfgs)
+                    kv.Value.Value = Features.GetHotkey(kv.Key).Serialize();
             };
+
+            // 跑房杀参数（编辑 cfg 文件 ServerHopper 节）
+            ServerHopper.LobbyIds = Config.Bind("ServerHopper", "LobbyIds", "", "跑房杀 固定房间ID列表（逗号分隔）").Value;
+            ServerHopper.ScanMode = Config.Bind("ServerHopper", "ScanMode", true, "跑房杀 true=自动扫描公开房 false=固定ID列表").Value;
+            ServerHopper.ScanPrefix = Config.Bind("ServerHopper", "ScanPrefix", "", "跑房杀 只进名字含此前缀的房").Value;
+            ServerHopper.JoinTimeout = Config.Bind("ServerHopper", "JoinTimeout", 10f, "跑房杀 进房超时(秒)").Value;
+            ServerHopper.LogEnabled = Config.Bind("ServerHopper", "LogEnabled", true, "跑房杀 写日志开关").Value;
 
             Patches.Apply(new HarmonyLib.Harmony("hyena.quest.cheat"));
 
-            Logger.LogInfo("Hyena Quest Cheat v1.2.6 loaded. INS=面板开关(默认开启). 热键可在菜单里改");
+            Logger.LogInfo("Hyena Quest Cheat v1.3.0 loaded. INS=面板开关. 全功能热键可在菜单「热键」页改");
         }
 
         private void Update()
@@ -51,37 +56,50 @@ namespace HyenaQuestCheat
             // 改键状态下捕获下一键
             Features.CaptureHotkey();
 
+            // 全功能快捷键
+            Features.ProcessHotkeys();
+
             // 菜单按钮请求在 Update 里消费，避免在 OnGUI 内直接触发 RPC
             if (Features.AutoOrderRequested) { Features.AutoOrderRequested = false; AutoOrder.Start(); }
             if (Features.AutoWinRequested) { Features.AutoWinRequested = false; AutoWin.Start(); }
 
-            // 吸废料热键（拨号/配送已并入一键配送，无独立热键）
-            if (Features.Rebind == Features.HotkeyAction.None)
-            {
-                if (Features.VacuumHotkey.WasPressedThisFrame())
-                {
-                    if (VacuumAll.IsActive) VacuumAll.Stop();
-                    else VacuumAll.Start();
-                }
-            }
-
-            // 面板开关时锁/放输入（走游戏光标请求栈，不自己锁死鼠标）
+            // 面板开关时锁/放输入
             InputLock.Apply(Features.MenuOpen);
 
             Features.Tick();        // 移动倍率渐变
+            AntiSpectateCtrl.Tick();// 反观战：周期性把 health 钉回0
             VacuumAll.Update();
             AutoDial.Update();
-            AutoDeliver.Update();   // 等所有权到位后传送配送
-            AutoOrder.Update();     // 一键配送状态机
-            AutoWin.Update();       // 一键解放双手状态机
+            AutoDeliver.Update();
+            AutoOrder.Update();
+            AutoWin.Update();
             KillTarget.Update();    // 秒杀/操控：刷新列表 + 循环杀 + 补刀
+            ServerHopper.Update();  // 跑房杀：自动进房→杀全部→退出→下一个
             ChatSpam.Update();      // 公屏刷屏
+            AntiGrief.Update();     // 防整·锁物反抢
         }
 
         private void OnGUI()
         {
-            if (!Features.MenuOpen) return;
-            Features.Menu.Draw();
+            // 残留半透明 GUI.color 会导致菜单背景透明 → 强制不透明画完再还原
+            var gColor = GUI.color;
+            var gBg = GUI.backgroundColor;
+            var gContent = GUI.contentColor;
+            GUI.color = Color.white;
+            GUI.backgroundColor = Color.white;
+            GUI.contentColor = Color.white;
+            try
+            {
+                Esp.Draw();             // ESP透视（菜单关着也画）
+                if (!Features.MenuOpen) return;
+                Features.Menu.Draw();
+            }
+            finally
+            {
+                GUI.color = gColor;
+                GUI.backgroundColor = gBg;
+                GUI.contentColor = gContent;
+            }
         }
     }
 }

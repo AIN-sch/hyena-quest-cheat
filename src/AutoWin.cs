@@ -4,13 +4,7 @@ using HyenaQuest;
 
 namespace HyenaQuestCheat
 {
-    /// <summary>
-    /// 一键解放双手（自动通关）：
-    ///   吸废料 → 袋满入账船上(③) → 拨号下单 → 等配送件 → 隔空拿取送达 → 债务还清即通关，否则循环到废料耗尽。
-    ///
-    /// 自动回收走「房主直写账本」：sc.Add() 把袋里废料直接加进 ③（claimedScrap），再 bag.Clear() 清袋继续吸，
-    /// 绕开物理倒袋，最稳。因此本功能要求房主（主机）。
-    /// </summary>
+    /// <summary>一键通关：吸废料→入账船上→拨号→配送，还清债务即通关；要求房主（直写账本）。</summary>
     public static class AutoWin
     {
         private enum Phase { None, Absorb, Dump, Dial, WaitSpawn, Deliver }
@@ -28,7 +22,7 @@ namespace HyenaQuestCheat
             if (_phase != Phase.None) { Features.Notify("一键解放双手已在运行"); return; }
             if (PlayerController.LOCAL == null) { Features.Notify("请先进对局再开启一键解放双手"); return; }
             if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsServer)
-            { Features.Notify("自动回收需要房主(主机)，你现在是客户端"); return; }
+            { Features.Notify("自动回收需要房主(主机)，当前为客户端"); return; }
 
             _phase = Phase.Absorb;
             _dialRetries = 0;
@@ -58,8 +52,7 @@ namespace HyenaQuestCheat
             if (PlayerController.LOCAL == null) { Stop(); return; }
             if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsServer) { Stop(); return; }
 
-            // 拨号/配送要求对局真正开始(PLAYING)；没开始就退回吸废料，对局一开自动往下走。
-            // 只在船里/大厅开着：吸废料+入账船上照跑，不碰电话。
+            // 拨号/配送需对局开始(PLAYING)；否则退回吸废料，对局开始后自动继续
             bool inRound = Features.InRound();
             if (_phase >= Phase.Dial && !inRound) { _phase = Phase.Absorb; }
 
@@ -71,7 +64,7 @@ namespace HyenaQuestCheat
                     if (BagScrap() > 0) { _phase = Phase.Dump; _ledgerWaitStart = 0f; break; }
                     if (!VacuumAll.IsWorldEmpty())
                     {
-                        // 有实际可吸的实体 → 直接开吸；只剩账本有数 → 挂着等废料长出来/房间刷出来
+                        // 有实体可吸则开吸；仅账本有数则等待废料刷新
                         if (VacuumAll.CountWorldScrap() > 0) { VacuumAll.Start(); _ledgerWaitStart = 0f; break; }
                         if (!inRound) break;
                         if (_ledgerWaitStart == 0f) _ledgerWaitStart = Time.time;
@@ -102,10 +95,10 @@ namespace HyenaQuestCheat
                         _dialRetries = 0;
                         break;
                     }
-                    // 拨号没开始：没可拨任务（废料不够 或 都在配送中）
+                    // 拨号没开始：废料不足或任务均在配送中
                     if (PaidDebt()) { NotifyWin(); return; }
                     if (!VacuumAll.IsWorldEmpty()) { _phase = Phase.Absorb; VacuumAll.Start(); break; }
-                    // 全图吸空还拨不上 → 隔几秒重试几次，别一次就放弃
+                    // 全图吸空仍拨不上 → 间隔重试数次
                     _dialRetries++;
                     if (_dialRetries >= 8)
                     {

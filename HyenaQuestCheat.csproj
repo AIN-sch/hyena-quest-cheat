@@ -93,6 +93,10 @@
       <HintPath>..\delivery-beyond_Data\Managed\Unity.InputSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="com.rlabrecque.steamworks.net">
+      <HintPath>..\delivery-beyond_Data\Managed\com.rlabrecque.steamworks.net.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Unity.TextMeshPro">
       <HintPath>..\delivery-beyond_Data\Managed\Unity.TextMeshPro.dll</HintPath>
       <Private>false</Private>
