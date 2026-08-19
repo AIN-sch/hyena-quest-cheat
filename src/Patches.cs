@@ -6,6 +6,7 @@ using UnityEngine;
 using Unity.Netcode.Components;
 using ECM2;
 using HyenaQuest;
+using MetaVoiceChat;
 
 namespace HyenaQuestCheat
 {
@@ -358,6 +359,21 @@ namespace HyenaQuestCheat
             static void Prefix(string errorMessage)
             {
                 Raw = errorMessage;
+            }
+        }
+
+        // ---------------- 语音广播：覆盖麦克风采样再进编码器 ----------------
+        // SendFrame 是本地采样进 Opus 前的最后一站，Prefix 改写 samples 数组即全房广播。
+        [HarmonyPatch(typeof(MetaVc), "SendFrame")]
+        public static class Patch_VoiceBroadcast
+        {
+            static void Prefix(MetaVc __instance, int index, float[] samples)
+            {
+                if (!VoiceBroadcast.Active) return;
+                VoiceBroadcast.InjectSamples(samples);
+                // 强制本地麦开启：按键说话/闭麦时不让发送被挡
+                __instance.isInputMuted.Value = false;
+                __instance.isDeafened.Value = false;
             }
         }
     }

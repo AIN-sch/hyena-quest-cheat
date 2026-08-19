@@ -810,8 +810,8 @@ namespace HyenaQuestCheat
                 DrawRGBBorder(_win, 3f);   // RGB 流动灯边框
             }
 
-            private static int _tab;   // 0自动 1操控 2玩家 3视觉 4热键
-            private static readonly string[] TabNames = { "自动", "操控", "玩家", "视觉", "热键" };
+            private static int _tab;   // 0自动 1操控 2玩家 3视觉 4语音 5热键
+            private static readonly string[] TabNames = { "自动", "操控", "玩家", "视觉", "语音", "热键" };
 
             private static void DoWindow(int id)
             {
@@ -846,6 +846,7 @@ namespace HyenaQuestCheat
                     case 1: DrawKillTab(); break;
                     case 2: DrawPlayerTab(); break;
                     case 3: DrawVisualTab(); break;
+                    case 4: DrawVoiceTab(); break;
                     default: DrawHotkeyTab(); break;
                 }
                 GUILayout.EndScrollView();
@@ -970,6 +971,9 @@ namespace HyenaQuestCheat
                     if (GUILayout.Button("血1", BtnStyle(), GUILayout.Width(44))) KillTarget.SetBlood(p, 1);
                     GUILayout.EndHorizontal();
                     GUILayout.BeginHorizontal();
+                    bool hl = KillTarget.IsHealLooping(p);
+                    hl = GUILayout.Toggle(hl, "循环满血", GUILayout.Width(80));
+                    KillTarget.SetHealLoop(p, hl);
                     if (p.IsDead())
                     {
                         if (GUILayout.Button("复活", BtnStyle(), GUILayout.Width(60))) KillTarget.RevivePlayer(p);
@@ -1043,6 +1047,35 @@ namespace HyenaQuestCheat
                     GUILayout.Label(Features.IsHost
                         ? "<color=#888>房主: 开→对外假死，观战列表不可见。</color>"
                         : "<color=#888>客户端: 开→位置钉地底，观战为黑屏。</color>", StatusStyle());
+            }
+
+            // ---------- 语音 ----------
+            private static void DrawVoiceTab()
+            {
+                GroupTitle("— 语音广播 (本地音频播给全房) —");
+                GUILayout.Label("音频路径 (本地文件 或 http 地址)", StatusStyle());
+                string np = GUILayout.TextField(VoiceBroadcast.AudioPath, GUILayout.Height(22));
+                if (np != VoiceBroadcast.AudioPath) VoiceBroadcast.AudioPath = np;
+
+                GUILayout.BeginHorizontal();
+                string ptxt = VoiceBroadcast.Active
+                    ? "<color=#ff5555>■ 停止广播</color>"
+                    : "<color=#3B73F7>▶ 播放广播</color>";
+                if (GUILayout.Button(ptxt, RedBtn(), GUILayout.Height(28))) VoiceBroadcast.Toggle();
+                if (GUILayout.Button("重载", BtnStyle(), GUILayout.Height(28))) VoiceBroadcast.Reload();
+                GUILayout.EndHorizontal();
+
+                bool loop = GUILayout.Toggle(VoiceBroadcast.Loop, "循环播放", ToggleStyle());
+                if (loop != VoiceBroadcast.Loop) VoiceBroadcast.Loop = loop;
+
+                GUILayout.Label("本地监听音量: " + Mathf.RoundToInt(VoiceBroadcast.MonitorVolume * 100f) + "%", StatusStyle());
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("－", BtnStyle(), GUILayout.Width(30))) VoiceBroadcast.MonitorVolume = Mathf.Max(0f, VoiceBroadcast.MonitorVolume - 0.05f);
+                if (GUILayout.Button("＋", BtnStyle(), GUILayout.Width(30))) VoiceBroadcast.MonitorVolume = Mathf.Min(1f, VoiceBroadcast.MonitorVolume + 0.05f);
+                GUILayout.EndHorizontal();
+
+                GUILayout.Label("状态: " + VoiceBroadcast.Status, StatusStyle());
+                GUILayout.Label("<color=#888>支持 WAV/MP3/OGG；队友按各自音量正常听到；需对局内+麦克风在线</color>", StatusStyle());
             }
 
             // ---------- 热键 ----------

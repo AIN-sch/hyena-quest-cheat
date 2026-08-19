@@ -77,6 +77,10 @@
       <HintPath>..\delivery-beyond_Data\Managed\Unity.Netcode.Runtime.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="MetaVoiceChat">
+      <HintPath>..\delivery-beyond_Data\Managed\MetaVoiceChat.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Unity.Collections">
       <HintPath>..\delivery-beyond_Data\Managed\Unity.Collections.dll</HintPath>
       <Private>false</Private>
@@ -143,6 +147,14 @@
     </Reference>
     <Reference Include="UnityEngine.TextRenderingModule">
       <HintPath>..\delivery-beyond_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UnityWebRequestModule">
+      <HintPath>..\delivery-beyond_Data\Managed\UnityEngine.UnityWebRequestModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UnityWebRequestAudioModule">
+      <HintPath>..\delivery-beyond_Data\Managed\UnityEngine.UnityWebRequestAudioModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>

@@ -9,13 +9,16 @@ using HyenaQuest;
 
 namespace HyenaQuestCheat
 {
-    [BepInPlugin("hyena.quest.cheat", "Hyena Quest Cheat", "1.3.0")]
+    [BepInPlugin("hyena.quest.cheat", "Hyena Quest Cheat", "1.3.1")]
     public class Plugin : BaseUnityPlugin
     {
         private static readonly Dictionary<Features.HotkeyAction, ConfigEntry<string>> HkCfgs = new();
 
+        public static Plugin Instance { get; private set; }
+
         private void Awake()
         {
+            Instance = this;
             // 快捷键绑定到 cfg（首次默认，之后读配置）
             foreach (var it in Features.Menu.HotkeyItems)
             {
@@ -39,9 +42,14 @@ namespace HyenaQuestCheat
             ServerHopper.JoinTimeout = Config.Bind("ServerHopper", "JoinTimeout", 10f, "跑房杀 进房超时(秒)").Value;
             ServerHopper.LogEnabled = Config.Bind("ServerHopper", "LogEnabled", true, "跑房杀 写日志开关").Value;
 
+            // 语音广播参数（编辑 cfg 文件 Voice 节）
+            VoiceBroadcast.AudioPath = Config.Bind("Voice", "AudioPath", "", "语音广播 音频文件路径").Value;
+            VoiceBroadcast.Loop = Config.Bind("Voice", "Loop", false, "语音广播 循环播放").Value;
+            VoiceBroadcast.MonitorVolume = Config.Bind("Voice", "MonitorVolume", 0.15f, "语音广播 本地监听音量(0~1)").Value;
+
             Patches.Apply(new HarmonyLib.Harmony("hyena.quest.cheat"));
 
-            Logger.LogInfo("Hyena Quest Cheat v1.3.0 loaded. INS=面板开关. 全功能热键可在菜单「热键」页改");
+            Logger.LogInfo("Hyena Quest Cheat v1.3.1 loaded. INS=面板开关. 全功能热键可在菜单「热键」页改");
         }
 
         private void Update()
@@ -77,6 +85,7 @@ namespace HyenaQuestCheat
             ServerHopper.Update();  // 跑房杀：自动进房→杀全部→退出→下一个
             ChatSpam.Update();      // 公屏刷屏
             AntiGrief.Update();     // 防整·锁物反抢
+            VoiceBroadcast.Update();// 语音广播：对局外自动停 + 监听音量跟随
         }
 
         private void OnGUI()

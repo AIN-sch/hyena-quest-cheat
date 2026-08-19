@@ -243,6 +243,18 @@ namespace HyenaQuestCheat
             _bloodLoop.Remove(p.GetPlayerID());
         }
 
+        /// <summary>是否正被循环满血（扣血即回满）。</summary>
+        public static bool IsHealLooping(entity_player p)
+            => p != null && IsBloodLooping(p) && GetBloodLoopTarget(p) == entity_player.MAX_HEALTH;
+
+        /// <summary>开关循环满血：勾选后该玩家血量永远钉满，扣血瞬间回满。</summary>
+        public static void SetHealLoop(entity_player p, bool on)
+        {
+            if (p == null) return;
+            if (on) SetBloodLoop(p, entity_player.MAX_HEALTH);
+            else StopBloodLoop(p);
+        }
+
         // ============ 循环抢物 ============
 
         /// <summary>目标是否正被循环抢物。</summary>
