@@ -79,7 +79,7 @@ Or open `HyenaQuestCheat.sln` in Visual Studio and build there.
 
 ## Changelog
 
-- **v1.3.0**: Added server hopper (auto lobby hopping), anti-spectate, anti-grief, ESP, aim hotkeys, one-click dialing; fast-skips failed joins with logged reasons
+- **v1.3.0**: Added server hopper (auto lobby hopping), anti-spectate, anti-grief (block module), ESP, aim hotkeys, one-click dialing; fast-skips failed joins with logged reasons; log toggle at `[ServerHopper]` → `LogEnabled` in cfg
 - **v1.2.6**: Added fly and noclip; source open-sourced, added .sln project
 - **v1.2.1**: Fixed the loop-kill / rapid-shove crash that froze the whole lobby; fixed the one-click delivery infinite loop re-delivering the same order
 - **v1.2.0**: Initial release
