@@ -369,6 +369,7 @@ namespace HyenaQuestCheat
         {
             static void Prefix(MetaVc __instance, int index, float[] samples)
             {
+                VoiceBroadcast.TouchFrame();          // 标记语音管线在线（正式开局前的自由期也能播）
                 if (!VoiceBroadcast.Active) return;
                 VoiceBroadcast.InjectSamples(samples);
                 // 强制本地麦开启：按键说话/闭麦时不让发送被挡

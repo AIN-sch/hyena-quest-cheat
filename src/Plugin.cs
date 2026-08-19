@@ -9,7 +9,7 @@ using HyenaQuest;
 
 namespace HyenaQuestCheat
 {
-    [BepInPlugin("hyena.quest.cheat", "Hyena Quest Cheat", "1.3.1")]
+    [BepInPlugin("hyena.quest.cheat", "Hyena Quest Cheat", "1.3.2")]
     public class Plugin : BaseUnityPlugin
     {
         private static readonly Dictionary<Features.HotkeyAction, ConfigEntry<string>> HkCfgs = new();
@@ -49,7 +49,7 @@ namespace HyenaQuestCheat
 
             Patches.Apply(new HarmonyLib.Harmony("hyena.quest.cheat"));
 
-            Logger.LogInfo("Hyena Quest Cheat v1.3.1 loaded. INS=面板开关. 全功能热键可在菜单「热键」页改");
+            Logger.LogInfo("Hyena Quest Cheat v1.3.2 loaded. INS=面板开关. 全功能热键可在菜单「热键」页改");
         }
 
         private void Update()

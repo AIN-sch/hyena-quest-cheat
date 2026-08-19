@@ -5,3 +5,6 @@ obj/
 
 # IDE
 .vs/
+
+# 本地参考源码（不提交）
+STUDYUI/

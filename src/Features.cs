@@ -535,13 +535,18 @@ namespace HyenaQuestCheat
 
             private static void EnsureFonts()
             {
+                if (_cjk == null) _fontTried = false;   // 切场景字体被销毁则重建
                 if (_fontTried) return;
                 _fontTried = true;
                 try
                 {
                     _cjk = Font.CreateDynamicFontFromOSFont(
                         new[] { "Microsoft YaHei", "微软雅黑", "SimHei", "黑体", "SimSun", "宋体", "DengXian" }, 14);
-                    if (_cjk != null) GUI.skin.font = _cjk;
+                    if (_cjk != null)
+                    {
+                        _cjk.hideFlags = HideFlags.DontSave;
+                        GUI.skin.font = _cjk;
+                    }
                 }
                 catch { }
             }
@@ -689,6 +694,7 @@ namespace HyenaQuestCheat
                 var t = new Texture2D(1, 1);
                 t.SetPixel(0, 0, c);
                 t.Apply();
+                t.hideFlags = HideFlags.DontSave;   // 切场景不销毁，避免进大厅后背景贴图失效变透明
                 return t;
             }
 
@@ -715,6 +721,7 @@ namespace HyenaQuestCheat
                     }
                 _gripTex.Apply();
                 _gripTex.wrapMode = TextureWrapMode.Clamp;
+                _gripTex.hideFlags = HideFlags.DontSave;
                 return _gripTex;
             }
 
@@ -1076,13 +1083,14 @@ namespace HyenaQuestCheat
                 if (loop != VoiceBroadcast.Loop) VoiceBroadcast.Loop = loop;
 
                 GUILayout.Label("本地监听音量: " + Mathf.RoundToInt(VoiceBroadcast.MonitorVolume * 100f) + "%", StatusStyle());
+                VoiceBroadcast.MonitorVolume = Mathf.Clamp(GUILayout.HorizontalSlider(VoiceBroadcast.MonitorVolume, 0f, 1f), 0f, 1f);
                 GUILayout.BeginHorizontal();
-                if (GUILayout.Button("－", BtnStyle(), GUILayout.Width(30))) VoiceBroadcast.MonitorVolume = Mathf.Max(0f, VoiceBroadcast.MonitorVolume - 0.05f);
-                if (GUILayout.Button("＋", BtnStyle(), GUILayout.Width(30))) VoiceBroadcast.MonitorVolume = Mathf.Min(1f, VoiceBroadcast.MonitorVolume + 0.05f);
+                if (GUILayout.Button("静音", BtnStyle(), GUILayout.Height(22))) VoiceBroadcast.MonitorVolume = 0f;
+                if (GUILayout.Button("满音", BtnStyle(), GUILayout.Height(22))) VoiceBroadcast.MonitorVolume = 1f;
                 GUILayout.EndHorizontal();
 
                 GUILayout.Label("状态: " + VoiceBroadcast.Status, StatusStyle());
-                GUILayout.Label("<color=#888>支持 WAV/MP3/OGG；队友按各自音量正常听到；需对局内+麦克风在线</color>", StatusStyle());
+                GUILayout.Label("<color=#888>支持 WAV/MP3/OGG；队友按各自音量正常听到；需进对局、语音通道在线</color>", StatusStyle());
             }
 
             // ---------- 热键 ----------

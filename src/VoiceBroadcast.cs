@@ -23,6 +23,13 @@ namespace HyenaQuestCheat
         private static object _monitor;    // AudioSource（反射）
         private static bool _loading;
         private static string _loadPath = "";
+        private static float _lastFrameAt = float.NegativeInfinity;   // 最近一次本地语音帧时间
+
+        /// <summary>语音管线是否在跑：本地 MetaVc 每帧回调 SendFrame，1秒内没帧即视为离线。</summary>
+        public static bool VoiceOnline => Time.time - _lastFrameAt < 1f;
+
+        /// <summary>Harmony Prefix 每帧调用，标记语音帧活跃。</summary>
+        public static void TouchFrame() => _lastFrameAt = Time.time;
 
         // ---------- 反射缓存：UnityWebRequest / AudioClip / AudioSource ----------
         private static readonly Type T_AudioType = FindType("UnityEngine.AudioType");
@@ -43,7 +50,7 @@ namespace HyenaQuestCheat
         public static void Update()
         {
             if (!Active) return;
-            if (!Features.InRound()) { Stop(); return; }
+            if (!VoiceOnline) { Stop("已停止（对局外）"); return; }
             if (_monitor == null) return;
             EnsureSrcRefs();
             _srcVol?.SetValue(_monitor, MonitorVolume, null);
@@ -62,6 +69,7 @@ namespace HyenaQuestCheat
             if (Active) { Features.Notify("语音广播 播放中"); return; }
             if (_loading) { Features.Notify("音频加载中..."); return; }
             if (string.IsNullOrWhiteSpace(AudioPath)) { Features.Notify("先填音频文件路径"); return; }
+            if (!VoiceOnline) { Status = "对局外"; Features.Notify("语音通道未开启，进对局后再播"); return; }
             if (_clip == null || _loadPath != AudioPath)
             {
                 _loadPath = AudioPath;
@@ -82,7 +90,7 @@ namespace HyenaQuestCheat
             Start();
         }
 
-        public static void Stop()
+        public static void Stop(string reason = "已停止")
         {
             Active = false;
             if (_monitor != null)
@@ -90,7 +98,7 @@ namespace HyenaQuestCheat
                 EnsureSrcRefs();
                 _srcStop?.Invoke(_monitor, null);
             }
-            Status = "已停止";
+            Status = reason;
         }
 
         /// <summary>Harmony Prefix 调用：覆盖麦克风采样，队友听到本地音频。</summary>
@@ -107,6 +115,7 @@ namespace HyenaQuestCheat
                         Active = false;
                         if (_monitor != null) { EnsureSrcRefs(); _srcStop?.Invoke(_monitor, null); }
                         Status = "已播完";
+                        for (int k = i; k < samples.Length; k++) samples[k] = 0f;   // 收尾清余，不漏真实麦克风
                         return;
                     }
                 }
@@ -123,7 +132,10 @@ namespace HyenaQuestCheat
 
         private static IEnumerator CoLoad(string path)
         {
-            string url = File.Exists(path) ? "file://" + path.Replace('\\', '/') : path;
+            string url;
+            if (File.Exists(path)) url = "file://" + path.Replace('\\', '/');
+            else if (path.StartsWith("http://") || path.StartsWith("https://")) url = path;
+            else { Features.Notify("文件不存在"); Status = "文件不存在"; _loading = false; yield break; }
             if (M_GetAudioClip == null || T_AudioType == null)
             {
                 Features.Notify("音频接口不可用"); Status = "不可用"; _loading = false;
@@ -151,6 +163,7 @@ namespace HyenaQuestCheat
 
         private static void BeginPlay()
         {
+            if (!VoiceOnline) { Status = "对局外"; Features.Notify("语音通道已断开，未开始广播"); return; }
             if (_pcm == null) { Features.Notify("音频未就绪"); return; }
             _pos = 0;
             Active = true;
