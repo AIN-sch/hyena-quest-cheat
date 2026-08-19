@@ -493,14 +493,18 @@ namespace HyenaQuestCheat
             private static bool _fontTried;
             private static GUIStyle _winStyle, _navStyle, _navSel, _groupTitle, _status, _hint, _redBtn;
             private static GUIStyle _btn, _btnAccent, _toggleStyle;
-            private static readonly Color Accent = new Color(0.23f, 0.45f, 0.97f);
-            private static readonly Color BgWin = new Color(0.17f, 0.10f, 0.28f, 0.97f);   // 窗口底 紫
-            private static readonly Color BgPanel = new Color(0.21f, 0.13f, 0.34f, 0.95f);
-            private static readonly Color BgNav = new Color(0.18f, 0.11f, 0.30f, 1f);
-            private static readonly Color BtnBg = new Color(0.26f, 0.16f, 0.40f);          // 按钮底 深紫
-            private static readonly Color BtnBgHover = new Color(0.32f, 0.21f, 0.48f);
+            // Ready or Not 外挂同款配色（全实底，不透明）
+            private static readonly Color Accent = new Color(0.00f, 0.55f, 0.85f);        // 强调 青蓝
+            private static readonly Color AccentHi = new Color(0.00f, 0.70f, 0.90f);      // 高亮 亮青
+            private static readonly Color BgWin = new Color(0.01f, 0.00f, 0.02f, 1f);     // 窗口底 近黑
+            private static readonly Color BgPanel = new Color(0.04f, 0.00f, 0.08f, 1f);   // 面板
+            private static readonly Color BgNav = new Color(0.04f, 0.00f, 0.08f, 1f);     // 左侧栏
+            private static readonly Color BtnBg = new Color(0.05f, 0.00f, 0.10f);         // 按钮底 深紫黑
+            private static readonly Color BtnBgHover = new Color(0.12f, 0.02f, 0.25f);
+            private static readonly Color BtnBgPress = new Color(0.25f, 0.00f, 0.40f);
+            private static readonly Color TextMain = new Color(0.90f, 0.80f, 1.00f);      // 主文字 淡紫白
             private static readonly Color TextDim = new Color(0.62f, 0.64f, 0.72f);
-            private static readonly Color Border = new Color(0.36f, 0.26f, 0.52f);
+            private static readonly Color Border = new Color(0.40f, 0.00f, 0.80f);        // 强紫边框
 
             // 热键清单（名字 + 动作），菜单改键与提示共用
             public static readonly (HotkeyAction Action, string Label)[] HotkeyItems =
@@ -548,7 +552,7 @@ namespace HyenaQuestCheat
                 if (_winStyle != null) return _winStyle;
                 _winStyle = new GUIStyle(GUI.skin.window);
                 _winStyle.normal.background = Solid(BgWin);
-                _winStyle.normal.textColor = new Color(0.85f, 0.87f, 0.92f);
+                _winStyle.normal.textColor = TextMain;
                 _winStyle.padding = new RectOffset(0, 0, 0, 0);
                 _winStyle.border = new RectOffset(8, 8, 8, 8);
                 _winStyle.onNormal.background = _winStyle.normal.background;
@@ -561,8 +565,8 @@ namespace HyenaQuestCheat
                 _navStyle = new GUIStyle(GUI.skin.button);
                 _navStyle.normal.background = Solid(BgNav);
                 _navStyle.normal.textColor = TextDim;
-                _navStyle.hover.background = Solid(new Color(0.30f, 0.20f, 0.46f));
-                _navStyle.hover.textColor = new Color(0.9f, 0.92f, 0.95f);
+                _navStyle.hover.background = Solid(BtnBgHover);
+                _navStyle.hover.textColor = TextMain;
                 _navStyle.alignment = TextAnchor.MiddleLeft;
                 _navStyle.padding = new RectOffset(10, 4, 0, 0);
                 _navStyle.fontSize = 13;
@@ -574,10 +578,10 @@ namespace HyenaQuestCheat
             {
                 if (_navSel != null) return _navSel;
                 _navSel = new GUIStyle(NavStyle());
-                _navSel.normal.background = Solid(new Color(Accent.r, Accent.g, Accent.b, 0.22f));
-                _navSel.normal.textColor = new Color(0.62f, 0.77f, 1f);
+                _navSel.normal.background = Solid(new Color(Accent.r, Accent.g, Accent.b, 0.20f));
+                _navSel.normal.textColor = AccentHi;
                 _navSel.hover.background = _navSel.normal.background;
-                _navSel.hover.textColor = _navSel.normal.textColor;
+                _navSel.hover.textColor = AccentHi;
                 _navSel.fontStyle = FontStyle.Bold;
                 return _navSel;
             }
@@ -592,7 +596,7 @@ namespace HyenaQuestCheat
                     fontStyle = FontStyle.Bold,
                     alignment = TextAnchor.MiddleLeft
                 };
-                _groupTitle.normal.textColor = new Color(0.62f, 0.77f, 1f);
+                _groupTitle.normal.textColor = AccentHi;
                 return _groupTitle;
             }
 
@@ -644,9 +648,11 @@ namespace HyenaQuestCheat
                 if (_btn != null) return _btn;
                 _btn = new GUIStyle(GUI.skin.button);
                 _btn.normal.background = Solid(BtnBg);
-                _btn.normal.textColor = new Color(0.86f, 0.88f, 0.94f);
+                _btn.normal.textColor = TextMain;
                 _btn.hover.background = Solid(BtnBgHover);
                 _btn.hover.textColor = Color.white;
+                _btn.active.background = Solid(BtnBgPress);
+                _btn.active.textColor = Color.white;
                 _btn.fontSize = 12;
                 return _btn;
             }
@@ -655,9 +661,10 @@ namespace HyenaQuestCheat
             {
                 if (_btnAccent != null) return _btnAccent;
                 _btnAccent = new GUIStyle(BtnStyle());
-                _btnAccent.normal.background = Solid(new Color(Accent.r, Accent.g, Accent.b, 0.25f));
-                _btnAccent.normal.textColor = new Color(0.62f, 0.77f, 1f);
-                _btnAccent.hover.background = Solid(new Color(Accent.r, Accent.g, Accent.b, 0.38f));
+                _btnAccent.normal.background = Solid(new Color(Accent.r, Accent.g, Accent.b, 0.22f));
+                _btnAccent.normal.textColor = AccentHi;
+                _btnAccent.hover.background = Solid(new Color(Accent.r, Accent.g, Accent.b, 0.35f));
+                _btnAccent.hover.textColor = AccentHi;
                 _btnAccent.fontStyle = FontStyle.Bold;
                 return _btnAccent;
             }
@@ -730,7 +737,7 @@ namespace HyenaQuestCheat
             {
                 GUILayout.BeginHorizontal();
                 string text = val
-                    ? "<color=#3B73F7>●</color> " + label
+                    ? "<color=#00b3e6>●</color> " + label
                     : "<color=#5a5f6b>○</color> " + label;
                 bool nv = GUILayout.Toggle(val, text, ToggleStyle());
                 if (nv != val) val = nv;
@@ -819,11 +826,11 @@ namespace HyenaQuestCheat
 
                 // 标题栏
                 GUILayout.BeginHorizontal();
-                GUILayout.Label("<b><color=#3B73F7>Delivery & Beyond</color></b>  Cheat", TitleStyle());
+                GUILayout.Label("<b><color=#00b3e6>Delivery & Beyond</color></b>  Cheat", TitleStyle());
                 GUILayout.FlexibleSpace();
                 bool inRound = Features.InRound();
                 GUILayout.Label(inRound ? "<color=#00ff88>● 对局中</color>" : "<color=#ff5555>● 未在对局</color>", StatusStyle());
-                GUILayout.Label(Features.IsHost ? "<color=#3B73F7>房主</color>" : "客户端", StatusStyle());
+                GUILayout.Label(Features.IsHost ? "<color=#00b3e6>房主</color>" : "客户端", StatusStyle());
                 GUILayout.EndHorizontal();
 
                 // 左标签栏 + 内容区
@@ -1033,7 +1040,7 @@ namespace HyenaQuestCheat
                 GroupTitle("— 反观战 —");
                 GUILayout.BeginHorizontal();
                 string astxt = AntiSpectate
-                    ? "<color=#3B73F7>●</color> 反观战"
+                    ? "<color=#00b3e6>●</color> 反观战"
                     : "<color=#5a5f6b>○</color> 反观战";
                 bool asNew = GUILayout.Toggle(AntiSpectate, astxt, ToggleStyle());
                 if (asNew != AntiSpectate) { AntiSpectate = asNew; AntiSpectateCtrl.OnToggle(); }
@@ -1060,7 +1067,7 @@ namespace HyenaQuestCheat
                 GUILayout.BeginHorizontal();
                 string ptxt = VoiceBroadcast.Active
                     ? "<color=#ff5555>■ 停止广播</color>"
-                    : "<color=#3B73F7>▶ 播放广播</color>";
+                    : "<color=#00b3e6>▶ 播放广播</color>";
                 if (GUILayout.Button(ptxt, RedBtn(), GUILayout.Height(28))) VoiceBroadcast.Toggle();
                 if (GUILayout.Button("重载", BtnStyle(), GUILayout.Height(28))) VoiceBroadcast.Reload();
                 GUILayout.EndHorizontal();
