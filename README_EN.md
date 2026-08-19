@@ -32,7 +32,7 @@ Everything that works, grouped by use:
 - **Annoy others**: instant kill / re-kill (breaks D-SAFE) · shove / rapid shove · pin health (1 HP / full / loop) · steal items to your feet · force drop items · break glass · teleport players (host) · revive · suicide (manual only) · aim hotkeys (aim at a player: kill / revive / 1 HP / shove / steal / drop)
 - **Fun**: spinning anti-aim (spin / offset / bow) · fly / noclip · chat spam
 - **Visuals**: ESP (3D boxes + health / scrap / held item)
-- **Menu**: INS to toggle · rebindable hotkeys (keyboard / mouse) · draggable and resizable
+- **Menu**: INS to toggle · rebindable hotkeys (keyboard / mouse)
 
 ## Known Bugs
 
