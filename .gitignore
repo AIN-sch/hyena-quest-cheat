@@ -1,0 +1,10 @@
+# 构建产物
+bin/
+obj/
+*.user
+
+# IDE
+.vs/
+
+# 本地参考源码（不提交）
+STUDYUI/
